@@ -1,0 +1,14 @@
+{
+  "name": "goop",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "check": "node scripts/check.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,351 @@
+/* Short transitions never retain two complete pages or move persistent chrome. */
+.screen {
+  view-transition-name: none;
+  animation: content-enter 150ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.dial {
+  view-transition-name: none !important;
+}
+.chart {
+  animation: chart-enter 180ms ease-out both;
+}
+@keyframes content-enter {
+  from {
+    opacity: 0.85;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes chart-enter {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+#header,
+#bottom-nav {
+  transform-style: flat;
+  isolation: isolate;
+}
+#bottom-nav a {
+  transition: color 100ms ease;
+}
+#bottom-nav a:active svg {
+  transform: scale(0.91);
+  transition: transform 80ms ease;
+}
+dialog {
+  animation: sheet-settle 230ms cubic-bezier(0.22, 0.8, 0.24, 1) both;
+}
+dialog::backdrop {
+  animation: scrim-in 140ms ease both;
+}
+@keyframes sheet-settle {
+  from {
+    transform: translateY(35px);
+    opacity: 0.65;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.coach-icon span {
+  font-size: 0;
+  border: 0;
+  border-radius: 0;
+  width: 23px;
+  height: 25px;
+  background: #d2dae1;
+  mask: url("/monogram.svg") center/contain no-repeat;
+}
+.goop-mark {
+  font-size: 0;
+  border: 0;
+  border-radius: 0;
+  width: 33px;
+  height: 36px;
+  background: #aebcc6;
+  mask: url("/monogram.svg") center/contain no-repeat;
+}
+.widget-goop {
+  font-size: 0;
+  border: 0;
+  border-radius: 0;
+  background: #b1c5d2;
+  mask: url("/monogram.svg") center/70% no-repeat;
+}
+.sphere-wrap canvas {
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .chart,
+  dialog,
+  dialog::backdrop {
+    animation: none !important;
+  }
+}
+
+.personal-wordmark {
+  padding-inline: 12px;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  font-size: clamp(18px, 5vw, 25px);
+  letter-spacing: 2px;
+}
+.steps-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 30px 0 40px;
+}
+.steps-total svg {
+  width: 32px;
+  height: 32px;
+  color: #a6bac5;
+}
+.steps-total strong {
+  font: 700 64px var(--num);
+}
+.steps-total > span {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #aeb8bf;
+}
+.activity-launch {
+  padding: 22px 0 8px;
+}
+.activity-launch h1 {
+  font-size: 36px;
+  margin: 12px 0 5px;
+  letter-spacing: -1px;
+}
+.activity-launch > p {
+  color: #aeb8bf;
+  margin-bottom: 26px;
+}
+.start-workout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 58px;
+  background: #a0e35a;
+  color: #132016;
+  border-radius: 12px;
+  letter-spacing: 1px;
+}
+.start-workout-button > span {
+  margin-left: auto;
+}
+.start-workout-button svg {
+  width: 23px;
+  height: 23px;
+}
+.quick-sports {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0;
+}
+.quick-sports button {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid #414a4e;
+  border-radius: 12px;
+  padding: 18px 3px 12px;
+  background: #2c3337;
+  min-width: 0;
+  transition:
+    transform 120ms,
+    background 120ms;
+}
+.quick-sports button:active {
+  transform: scale(0.94);
+  background: #414d41;
+}
+.quick-sports svg {
+  width: 27px;
+  height: 27px;
+  color: #a3d878;
+}
+.quick-sports span {
+  font-size: 10px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.journal-home-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: #2c3337;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 18px 0;
+}
+.journal-home-tile svg {
+  width: 23px;
+  height: 23px;
+  color: #a7bbc7;
+}
+.journal-home-tile > span:first-of-type {
+  display: grid;
+  gap: 3px;
+}
+.journal-home-tile small {
+  font-size: 11px;
+  color: #aeb8bf;
+}
+.journal-home-tile > span:last-child {
+  margin-left: auto;
+  font-size: 25px;
+  color: #acb7be;
+}
+.outlook-row {
+  display: flex;
+}
+.outlook-button {
+  flex: 1;
+}
+.live-panel-label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: #aeb8bf;
+}
+.live-level {
+  text-align: center;
+  color: #b4dbad;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 20px 0 0;
+}
+.workout-ready > svg {
+  width: 48px;
+  height: 48px;
+  color: #a0e35a;
+  display: block;
+  margin: 12px auto 24px;
+}
+.workout-ready h3,
+.workout-ready > p {
+  text-align: center;
+}
+.workout-ready .block-button {
+  margin-top: 12px;
+}
+.ready-zones {
+  display: flex;
+  gap: 5px;
+  margin: 24px 0;
+}
+.ready-zones span {
+  flex: 1;
+  min-width: 0;
+  font-size: 9px;
+  text-align: center;
+  color: #b5bdc3;
+}
+.ready-zones i {
+  display: block;
+  height: 5px;
+  background: var(--zone-color);
+  border-radius: 2px;
+  margin-bottom: 8px;
+}
+.workout-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 65vh;
+  text-align: center;
+}
+.workout-countdown h1 {
+  font-size: 27px;
+}
+.workout-countdown > p {
+  font-size: 12px;
+  color: #acb6bd;
+}
+.countdown-ring {
+  width: 220px;
+  height: 220px;
+  border: 6px solid #a0e35a;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 24px 0;
+  box-shadow:
+    0 0 45px #a0e35a15,
+    inset 0 0 30px #a0e35a08;
+}
+.countdown-ring strong {
+  font: 700 120px var(--num);
+  color: #a0e35a;
+}
+.countdown-beat {
+  animation: countdown-beat 650ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes countdown-beat {
+  from {
+    transform: scale(1.18);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .countdown-beat {
+    animation: none;
+  }
+}
+.workout-widget-main {
+  justify-content: space-between;
+}
+.setup-details summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+.setup-steps {
+  padding-left: 20px;
+  font-size: 13px;
+  color: #bfc8cf;
+  line-height: 1.65;
+}
+.setup-steps li {
+  margin: 14px 0;
+}
+.callback-value {
+  display: block;
+  overflow-wrap: anywhere;
+  user-select: all;
+  padding: 12px;
+  background: #151b1e;
+  border-radius: 8px;
+  color: #b1dba4;
+  margin: 12px 0;
+  font-size: 12px;
+}
+.setup-details a {
+  text-align: center;
+  text-decoration: none;
+}

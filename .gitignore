@@ -1,0 +1,11 @@
+node_modules/
+.vercel/
+.env*
+!.env.example
+preview/
+public/
+ios/Config.xcconfig
+ios/**/*.xcodeproj/
+ios/**/DerivedData/
+ios/**/Info.plist
+ios/**/xcuserdata/

@@ -1,0 +1,14 @@
+import { escapeHTML as esc } from "./model.js";
+export function widgetsPreview({
+  sample = true,
+  sleep = 98,
+  recovery = 81,
+  strain = 7,
+  workout = null,
+} = {}) {
+  const ring = (label, value, color, max = 100) =>
+    `<div class="widget-ring"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="33" fill="none" stroke="currentColor" stroke-opacity=".15" stroke-width="5"/><circle cx="40" cy="40" r="33" fill="none" stroke="${color}" stroke-width="5" stroke-dasharray="${value == null ? 0 : Math.min(value / max, 1) * 207.35} 207.35" transform="rotate(-90 40 40)"/></svg><strong>${value == null ? "—" : max === 21 ? Number(value).toFixed(1) : value}${max === 100 && value != null ? "<small>%</small>" : ""}</strong><span>${label}</span></div>`;
+  const activity = workout?.type || "Running",
+    hr = workout?.samples?.at(-1)?.hr ?? 137;
+  return `<div class="feature-hero"><h1>Widgets</h1><p>Quiet, useful information at a glance.</p></div><span class="availability" style="margin:17px 0">${sample ? "SAMPLE WIDGET PREVIEWS" : "RECORDED SNAPSHOT PREVIEW"}</span><h3 class="section-label">HOME SCREEN · DAILY RINGS</h3><div class="widget-preview app-rings"><div class="widget-eyebrow">GOOP <span>${sample ? "DEMO" : "LAST SYNC"}</span></div><div class="widget-rings">${ring("SLEEP", sleep, "#8ca9bb")}${ring("RECOVERY", recovery, "#83df41")}${ring("STRAIN", strain, "#639be0", 21)}</div></div><h3 class="section-label">WORKOUT · LIVE ACTIVITY</h3><div class="widget-preview workout-widget"><div class="widget-eyebrow">${esc(activity.toUpperCase())}<span>${sample ? "SIMULATED" : "LAST READING"}</span></div><div class="workout-widget-main"><div><strong>12:17</strong><span>ELAPSED</span></div><div><strong><small>♥</small>${hr}</strong><span>BPM</span></div></div><div class="widget-zones"><i></i><i></i><i></i><i></i><i></i><b></b></div><div class="widget-zone-caption"><span>ZONE 3</span><span>Last sensor update · ${sample ? "Demo" : "Snapshot"}</span></div></div><h3 class="section-label">LOCK SCREEN · TRANSPARENT RINGS</h3><div class="lock-wallpaper"><div class="lock-date">Saturday, 31 October</div><div class="lock-time">9:41</div><div class="lock-ring-widget">${ring("SLEEP", sleep, "currentColor")}${ring("RECOVERY", recovery, "currentColor")}${ring("STRAIN", strain, "currentColor", 21)}</div><span class="lock-caption">SYSTEM-TINTED · NO CARD BACKGROUND</span></div><h3 class="section-label">LOCK SCREEN · SLEEP & RECOVERY</h3><div class="minimal-recovery-widget"><span>GOOP</span><div><b>${sleep == null ? "—" : sleep + "%"}<small>SLEEP</small></b><i></i><b>${recovery == null ? "—" : recovery + "%"}<small>RECOVERY</small></b></div></div><div class="callout"><h3>Native iOS companion required</h3><p>A Home Screen website cannot install WidgetKit widgets or Live Activities. The native companion supplies these layouts using your last synced snapshot. Unsupported scores stay empty, and simulated workout readings stay labelled.</p></div>`;
+}

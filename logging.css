@@ -1,0 +1,618 @@
+.mode-selected {
+  background: #849e99;
+  color: #111b22;
+}
+.journal-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 5px;
+}
+.journal-progress > div {
+  height: 3px;
+  background: #3f4c56;
+  flex: 1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.journal-progress i {
+  display: block;
+  height: 100%;
+  background: #a6deb6;
+  transition: width 240ms ease;
+}
+.journal-progress > span {
+  font-size: 8px;
+  color: #9cafbc;
+  white-space: nowrap;
+}
+.journal-item {
+  border-bottom: 1px solid #38434d;
+}
+.journal-item .question {
+  border: 0;
+  padding: 20px 0;
+}
+.yesno {
+  isolation: isolate;
+  position: relative;
+  background: #1c242b;
+  border: 1px solid #45525e;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 0;
+  min-width: 118px;
+  flex-shrink: 0;
+}
+.yesno:before {
+  content: "";
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  width: calc(50% - 3px);
+  border-radius: 5px;
+  background: #e4ecee;
+  opacity: 0;
+  transform: translateX(0);
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 130ms ease;
+  z-index: -1;
+}
+.yesno.has-answer:before {
+  opacity: 1;
+}
+.yesno[data-selected="No"]:before {
+  transform: translateX(100%);
+}
+.yesno button {
+  flex: 1;
+  border: 0;
+  min-height: 35px;
+  min-width: 54px;
+  border-radius: 5px;
+  background: none !important;
+  font-size: 10px;
+  font-weight: 700;
+  transition:
+    color 150ms ease,
+    transform 120ms ease;
+  padding: 8px 7px;
+  color: #aebfca;
+}
+.yesno button span {
+  font-size: 11px;
+  margin-right: 4px;
+  color: #8eabb7;
+}
+.yesno button.chosen {
+  color: #14252d;
+}
+.yesno button.chosen span {
+  color: #234f41;
+}
+.yesno button:active {
+  transform: scale(0.92);
+}
+.button-pop {
+  animation: button-pop 230ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes button-pop {
+  50% {
+    transform: scale(0.94);
+  }
+}
+.question b {
+  font-size: 13px;
+  font-weight: 650;
+}
+.question small {
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 6px;
+  max-width: 210px;
+}
+.answer-detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 160ms ease;
+}
+.answer-detail.expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.answer-detail > div {
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+.answer-detail.expanded > div {
+  padding-bottom: 17px;
+}
+.answer-detail label {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #9fb3c2;
+}
+.answer-detail input {
+  width: 96px;
+  color: #e7edf1;
+  background: #222f39;
+  border: 1px solid #4c606f;
+  border-radius: 5px;
+  font: 700 16px var(--num);
+  padding: 8px;
+}
+.journal-day-dot {
+  height: 4px;
+  width: 4px;
+  border-radius: 50%;
+  background: #60717f;
+  display: block;
+  margin: 6px auto 0;
+}
+.journal-day-dot.complete {
+  background: #9bdeb4;
+}
+.journal-save .saved {
+  color: #9bdeb4;
+}
+.journal-save .primary {
+  min-width: 85px;
+}
+.logging-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.logging-pair > button {
+  position: relative;
+  border-radius: 11px;
+  background: #2d353b;
+  padding: 19px 16px;
+  text-align: left;
+}
+.logging-illustration {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  width: 42px;
+  border-radius: 10px;
+  background: #36434a;
+  color: #b0c2cc;
+  margin-bottom: 15px;
+}
+.logging-illustration svg {
+  height: 31px;
+  width: 31px;
+}
+.logging-pair b {
+  font-size: 15px;
+  display: block;
+}
+.logging-pair small {
+  font-size: 10px;
+  color: #a6b8c5;
+  display: block;
+  margin-top: 6px;
+}
+.logging-pair .chevron {
+  position: absolute;
+  right: 16px;
+  top: 32px;
+}
+.nutrition-summary {
+  padding: 24px 18px;
+  background: #2b333b;
+  border-radius: 12px;
+  margin: 22px 0 17px;
+}
+.nutrition-calories {
+  text-align: center;
+}
+.nutrition-calories strong {
+  display: block;
+  font: 700 63px var(--num);
+  letter-spacing: -1.5px;
+}
+.nutrition-calories > span {
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  color: #b6c3cc;
+  font-weight: 800;
+}
+.macro-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  text-align: center;
+  margin-top: 26px;
+}
+.macro-row > div {
+  position: relative;
+}
+.macro-row i {
+  width: 5px;
+  height: 5px;
+  display: inline-block;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+.macro-row b {
+  font: 700 25px var(--num);
+}
+.macro-row b small {
+  font: 10px var(--font);
+  margin-left: 2px;
+  color: #bcc9d2;
+}
+.macro-row span {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.8px;
+  color: #a6b7c5;
+  font-weight: 700;
+  margin-top: 7px;
+}
+.macro-track {
+  display: flex;
+  gap: 3px;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  margin-top: 20px;
+}
+.macro-track i {
+  display: block;
+}
+.food-sync {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 18px 0 26px;
+  font-size: 10px;
+  color: #b7c9d5;
+}
+.food-sync button {
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  color: #9fc2ea;
+  font-weight: 800;
+}
+.food-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: #2a343c;
+  border-radius: 9px;
+  padding: 14px 12px;
+  margin-bottom: 9px;
+}
+.food-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  background: #3e4649;
+  color: #d6cbb4;
+  flex-shrink: 0;
+}
+.food-icon svg {
+  width: 27px;
+  height: 27px;
+}
+.food-item b {
+  font-size: 12px;
+  font-weight: 700;
+}
+.food-item small {
+  display: block;
+  color: #a0b4c3;
+  font-size: 8px;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.food-item-calories {
+  font: 700 24px var(--num);
+  margin-left: auto;
+  white-space: nowrap;
+  text-align: right;
+}
+.food-item-calories small {
+  font: 8px var(--font);
+}
+.food-item > button {
+  font-size: 16px;
+  color: #a4bdcf;
+}
+.meal-empty {
+  font-size: 11px;
+  color: #8498a8;
+  padding: 13px 0 18px;
+  border-bottom: 1px solid #384b59;
+}
+.meal-selector {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+.meal-selector button {
+  font-size: 7px;
+  padding: 10px 2px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: #19232b;
+  border: 1px solid #425463;
+  border-radius: 4px;
+}
+.meal-selector .selected {
+  background: #b6cbd4;
+  color: #172832;
+  border-color: #b6cbd4;
+}
+.weight-hero {
+  text-align: center;
+  padding: 31px 15px 27px;
+}
+.weight-hero > strong {
+  font: 700 71px var(--num);
+  letter-spacing: -1.3px;
+}
+.weight-hero > strong small {
+  font: 16px var(--font);
+  margin-left: 5px;
+  letter-spacing: 0;
+  color: #b0c2ce;
+}
+.weight-hero > span {
+  display: block;
+  font-size: 9px;
+  color: #9eb1bf;
+  margin-top: 10px;
+}
+.weight-hero p {
+  font-size: 11px;
+  color: #a6d7c1;
+  margin-top: 17px;
+}
+.weight-units {
+  display: flex;
+  gap: 4px;
+  margin-top: 0;
+  background: #17222b;
+  border: 1px solid #4b5f6e;
+  padding: 3px;
+  border-radius: 5px;
+  height: 44px;
+}
+.weight-units button {
+  flex: 1;
+  font-size: 12px;
+  border-radius: 3px;
+  color: #a5bbcb;
+}
+.weight-units .selected {
+  background: #b4cbd5;
+  color: #172b39;
+  font-weight: 800;
+}
+.weight-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 17px 2px;
+  border-bottom: 1px solid #3b4d5a;
+}
+.weight-entry > span b {
+  font-size: 12px;
+}
+.weight-entry small {
+  display: block;
+  font-size: 9px;
+  color: #a2b6c5;
+  margin-top: 6px;
+}
+.weight-entry > strong {
+  font: 700 27px var(--num);
+}
+.weight-entry > strong small {
+  font: 10px var(--font);
+  display: inline;
+  margin-left: 4px;
+}
+.distribution-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 18px 0 28px;
+}
+.distribution-pair h4 {
+  font-size: 8px;
+  letter-spacing: 1px;
+  margin: 0 0 8px;
+}
+.distribution-pair svg {
+  width: 100%;
+  height: auto;
+}
+.distribution-pair text {
+  font: 8px var(--font);
+}
+.multichart {
+  height: auto !important;
+  max-height: 240px;
+}
+.chart text {
+  font-family: var(--font);
+  font-weight: 600;
+}
+.coach-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 800;
+  margin: 17px 0 35px;
+}
+.coach-status small {
+  display: block;
+  font-size: 7px;
+  color: #8fa5b6;
+  margin-top: 5px;
+  letter-spacing: 0.5px;
+}
+.coach-avatar {
+  height: 28px;
+  width: 28px;
+  border-radius: 50%;
+  border: 1px solid #9691d7;
+  display: grid;
+  place-items: center;
+  color: #c5c8ef;
+  font-size: 12px;
+}
+.coach-message {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #d7e0e6;
+  margin: 17px 0;
+  padding: 13px 0;
+  max-width: 90%;
+}
+.coach-message.from-user {
+  background: #37434b;
+  border-radius: 9px 9px 0 9px;
+  padding: 12px 14px;
+  margin-left: auto;
+  width: max-content;
+}
+.coach-suggestions {
+  display: grid;
+  gap: 9px;
+  margin: 32px 0 25px;
+}
+.coach-suggestions button {
+  background: #293740;
+  border: 1px solid #445d6e;
+  border-radius: 7px;
+  padding: 12px;
+  text-align: left;
+  font-size: 11px;
+  color: #b5c8d6;
+}
+.coach-composer {
+  display: flex;
+  align-items: center;
+  border: 1px solid #7c79ba;
+  border-radius: 8px;
+  background: #14212b;
+  padding: 6px;
+  gap: 8px;
+  position: sticky;
+  bottom: 82px;
+}
+.coach-composer input {
+  flex: 1;
+  width: 0;
+  padding: 10px;
+  background: none;
+  border: 0;
+  color: white;
+  font-size: 12px;
+}
+.coach-composer button {
+  height: 33px;
+  width: 33px;
+  border-radius: 50%;
+  background: #c4c4e7;
+  color: #152535;
+  font-size: 23px;
+}
+.cycle-heading {
+  background: linear-gradient(#583c36, #332b2d);
+  padding: 22px 20px;
+  margin: 0 -19px 0;
+  border-radius: 10px 10px 0 0;
+}
+.cycle-heading > span {
+  font-size: 8px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+.cycle-heading h1 {
+  font-size: 21px;
+  margin-top: 30px;
+}
+.cycle-heading p {
+  font-size: 10px;
+  color: #e3b6a8;
+  margin-top: 10px;
+}
+.cycle-calendar {
+  padding: 20px 0;
+}
+.cycle-calendar h3 {
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin: 0 0 21px;
+}
+.cycle-weekdays,
+.cycle-dates {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 9px 3px;
+}
+.cycle-weekdays {
+  font-size: 7px;
+  letter-spacing: 0.6px;
+  color: #b0b7c3;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.cycle-dates button {
+  height: 30px;
+  font: 600 12px var(--num);
+  background: #2a3440;
+  border-radius: 3px;
+}
+.cycle-dates .menstrual {
+  background: #cc7b6a;
+}
+.cycle-dates .follicular {
+  background: #7168a0;
+}
+.cycle-dates .ovulatory {
+  background: #527e95;
+}
+.cycle-dates .luteal {
+  background: #624982;
+}
+.cycle-dates .today {
+  outline: 1px solid #f0d8c6;
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.cycle-calendar .legend {
+  font-size: 7px;
+  margin-top: 20px;
+}
+.logging-pair button:active,
+.food-item button:active,
+.block-button:active {
+  transform: scale(0.98);
+  transition: transform 100ms ease;
+}
+.answer-detail input:focus {
+  border-color: #9dc2d3;
+  outline: none;
+}

@@ -1,0 +1,4 @@
+GOOP_BUNDLE_ID = com.example.goop
+DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID
+GID_CLIENT_ID = YOUR_IOS_CLIENT_ID.apps.googleusercontent.com
+GID_REVERSED_CLIENT_ID = com.googleusercontent.apps.YOUR_IOS_CLIENT_ID

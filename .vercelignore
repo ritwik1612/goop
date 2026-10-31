@@ -1,0 +1,7 @@
+.env*
+!.env.example
+preview/
+ios/
+node_modules/
+.git/
+public/
