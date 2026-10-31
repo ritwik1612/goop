@@ -11,6 +11,7 @@ const assets = [
   "motion.css",
   "monogram.svg",
   "app.js",
+  "access.js",
   "live-hr.js",
   "workout-data.js",
   "model.js",

@@ -517,6 +517,7 @@ export function createEnhancements(ctx) {
     },
     connect: () => go("connections"),
     "google-login": () => {
+      if (!window.GOOPAccess?.unlocked) return window.GOOPAccess.unlock();
       if (sendNative("connectGoogle")) return;
       if (!status.configured)
         return modal(
@@ -568,6 +569,8 @@ export function createEnhancements(ctx) {
       toast("Local health snapshot removed.");
     },
     "set-mode": (el) => {
+      if (el.dataset.mode === "real" && !window.GOOPAccess?.unlocked)
+        return window.GOOPAccess.unlock();
       mode = el.dataset.mode;
       write("data-mode", mode);
       render();

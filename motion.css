@@ -415,3 +415,113 @@ dialog::backdrop {
   width: 45px;
   text-align: right;
 }
+body:not(.goop-ready) > #app,
+body:not(.goop-ready) > .demo-ribbon,
+body:not(.goop-ready) > .skip {
+  display: none;
+}
+#access-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 24px;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    #283932 0%,
+    #151c1e 40%,
+    #0c1012 75%
+  );
+}
+.access-card {
+  width: 100%;
+  max-width: 350px;
+}
+.access-card > img {
+  border-radius: 15px;
+  margin-bottom: 32px;
+}
+.access-eyebrow {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #9db7a9;
+}
+.access-card h1 {
+  font-size: 34px;
+  letter-spacing: -1px;
+  margin: 13px 0;
+}
+.access-card > p {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #aab6bc;
+  margin-bottom: 32px;
+}
+.access-card form label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #a5b7af;
+  display: block;
+  margin-bottom: 12px;
+}
+.access-card input {
+  width: 100%;
+  height: 70px;
+  border: 1px solid #4c5d56;
+  border-radius: 13px;
+  background: #1b2523;
+  color: #edf8ef;
+  font: 700 32px var(--num);
+  letter-spacing: 0.55em;
+  text-align: center;
+  outline-offset: 4px;
+}
+.access-card input:focus {
+  outline: 2px solid #a0df70;
+}
+.access-card .primary {
+  height: 55px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #a0df70;
+  color: #12200e;
+  border-radius: 10px;
+}
+.access-card .block-button {
+  min-height: 52px;
+  border: 1px solid #3c4847;
+  border-radius: 10px;
+  justify-content: center;
+}
+.access-card > small {
+  display: block;
+  text-align: center;
+  line-height: 1.6;
+  color: #7e9290;
+  font-size: 11px;
+  margin-top: 18px;
+}
+#access-error {
+  color: #e5ab98;
+  font-size: 12px;
+  min-height: 20px;
+}
+.access-divider {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 25px 0;
+  color: #71847b;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.access-divider:before,
+.access-divider:after {
+  content: "";
+  height: 1px;
+  background: #304039;
+  flex: 1;
+}

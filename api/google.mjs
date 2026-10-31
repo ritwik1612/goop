@@ -8,6 +8,7 @@ import {
   oauthStart,
   tokenRequest,
 } from "../lib/google-auth.mjs";
+import { hasAccess } from "../lib/access.mjs";
 import { normalizeGoogle } from "../health-model.js";
 const json = (value, status = 200, headers = {}) =>
   Response.json(value, {
@@ -38,15 +39,19 @@ export async function GET(request) {
     url = new URL(request.url),
     action = url.searchParams.get("action") || "status",
     jar = cookies(request),
-    session = cfg.ready ? unseal(jar.goop_session || "", cfg.secret) : null;
+    decoded = cfg.ready ? unseal(jar.goop_session || "", cfg.secret) : null,
+    session = decoded?.email === cfg.ownerEmail ? decoded : null;
   if (action === "status")
     return json({
       configured: cfg.ready,
-      connected: Boolean(session?.refreshToken),
+      connected:
+        hasAccess(request, cfg.secret) && Boolean(session?.refreshToken),
       nutritionEnabled: cfg.nutritionEnabled,
       nutritionAccess: Boolean(session?.nutrition),
       callback: cfg.origin ? `${cfg.origin}/api/google?action=callback` : null,
     });
+  if (!hasAccess(request, cfg.secret))
+    return json({ error: "Unlock personal access with your PIN first." }, 401);
   if (!cfg.ready)
     return json(
       {
@@ -122,6 +127,32 @@ export async function GET(request) {
           },
           400,
         );
+      const accountResponse = await fetch(
+        "https://openidconnect.googleapis.com/v1/userinfo",
+        {
+          headers: { Authorization: `Bearer ${token.access_token}` },
+          signal: AbortSignal.timeout(15000),
+        },
+      );
+      if (!accountResponse.ok)
+        return json(
+          {
+            error:
+              "Google account verification failed. Reconnect and allow email identity access.",
+          },
+          401,
+        );
+      const account = await accountResponse.json();
+      if (
+        account.email_verified !== true ||
+        String(account.email || "").toLowerCase() !== cfg.ownerEmail
+      )
+        return json(
+          {
+            error: "This private GOOP installation is restricted to its owner.",
+          },
+          403,
+        );
       const identity = await fetch(
         "https://health.googleapis.com/v4/users/me/identity",
         {
@@ -147,6 +178,7 @@ export async function GET(request) {
           "goop_session",
           seal(
             {
+              email: cfg.ownerEmail,
               refreshToken: token.refresh_token,
               nutrition: Boolean(
                 flow.nutrition &&
@@ -279,6 +311,8 @@ export async function POST(request) {
   const cfg = config();
   if (request.headers.get("origin") !== cfg.origin)
     return json({ error: "Origin not allowed" }, 403);
+  if (!hasAccess(request, cfg.secret))
+    return json({ error: "Unlock personal access first." }, 401);
   const url = new URL(request.url);
   if (url.searchParams.get("action") !== "disconnect")
     return json({ error: "Unknown action" }, 404);

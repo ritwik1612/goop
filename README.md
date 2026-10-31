@@ -64,6 +64,14 @@ Keep GOOP visible. iOS may suspend Bluetooth/GPS while the browser is background
 
 Bluetooth carries heart rate, not sleep, steps, proprietary scores or the Google app's workout controls. Start/stop the GOOP timer separately. My Data without a sensor records a timer only; simulated heart rate is confined to Demo sessions. Calories and Strain are not invented from the sensor feed.
 
+## Personal access and guests
+
+The entry screen supports a personal six-digit PIN or a guest demo. Set GOOP_OWNER_NAME for the greeting, GOOP_OWNER_EMAIL for the only allowed Google account, and GOOP_PIN_HASH to a salted scrypt hash (hexadecimal salt:hash). No plaintext PIN or owner email is bundled in this repository.
+
+Personal access uses a 12-hour HTTP-only cookie. Google login and sync require that cookie and a verified Google email matching GOOP_OWNER_EMAIL. Basic OpenID/email permissions identify the owner alongside the three read-only health scopes. More > Lock personal data clears access.
+
+Guest logs, preferences and snapshots use separate browser storage. The PIN gates the app UI and server access; local browser snapshots are not encrypted at rest. Failed PIN attempts are throttled using an instance-local counter and a signed attempt cookie, rather than a global distributed rate limiter.
+
 ## Host your own copy
 
 1. Fork this repository into your own GitHub account.

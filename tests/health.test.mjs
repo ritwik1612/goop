@@ -200,7 +200,12 @@ test("OAuth uses fresh state and S256 PKCE, with no write scopes", () => {
     createHash("sha256").update(a.verifier).digest("base64url"),
   );
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
-  assert.ok(SCOPES.every((s) => s.endsWith(".readonly")));
+  assert.ok(
+    SCOPES.filter((s) => s.startsWith("https://")).every((s) =>
+      s.endsWith(".readonly"),
+    ),
+  );
+  assert.ok(SCOPES.includes("openid") && SCOPES.includes("email"));
   assert.ok(!url.searchParams.get("scope").includes("nutrition"));
   assert.ok(
     new URL(oauthStart(c, true).url).searchParams

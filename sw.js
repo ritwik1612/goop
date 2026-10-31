@@ -1,4 +1,4 @@
-const CACHE = "goop-v6";
+const CACHE = "goop-v7";
 const SHELL = [
   "/",
   "/goop.css",
@@ -8,6 +8,7 @@ const SHELL = [
   "/motion.css",
   "/monogram.svg",
   "/app.js",
+  "/access.js",
   "/live-hr.js",
   "/workout-data.js",
   "/model.js",

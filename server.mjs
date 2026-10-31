@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GET, POST } from "./api/google.mjs";
+import { GET as accessGET, POST as accessPOST } from "./api/access.mjs";
 try {
   process.loadEnvFile(new URL(".env.local", import.meta.url));
 } catch (error) {
@@ -25,7 +26,7 @@ http
   .createServer(async (req, res) => {
     try {
       const url = new URL(req.url, `http://127.0.0.1:${port}`);
-      if (url.pathname === "/api/google") {
+      if (["/api/google", "/api/access"].includes(url.pathname)) {
         if (!["GET", "POST"].includes(req.method)) {
           res.writeHead(405);
           return res.end();
@@ -45,9 +46,15 @@ http
           headers: req.headers,
           ...(req.method === "POST" ? { body: Buffer.concat(chunks) } : {}),
         });
-        const response = await (req.method === "POST"
-          ? POST(request)
-          : GET(request));
+        const handler =
+          url.pathname === "/api/access"
+            ? req.method === "POST"
+              ? accessPOST
+              : accessGET
+            : req.method === "POST"
+              ? POST
+              : GET;
+        const response = await handler(request);
         res.statusCode = response.status;
         for (const [k, v] of response.headers)
           if (k !== "set-cookie") res.setHeader(k, v);

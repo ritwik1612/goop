@@ -2,7 +2,12 @@ let database;
 async function db() {
   if (database) return database;
   database = await new Promise((resolve, reject) => {
-    const req = indexedDB.open("goop-health", 1);
+    const req = indexedDB.open(
+      globalThis.window?.GOOPAccess?.unlocked
+        ? "goop-health"
+        : "goop-guest-health",
+      1,
+    );
     req.onupgradeneeded = () =>
       req.result.createObjectStore("sources", { keyPath: "id" });
     req.onsuccess = () => resolve(req.result);

@@ -7,6 +7,7 @@ test("OAuth route issues a PKCE cookie, verifies callback and syncs authorised r
     oldFetch = globalThis.fetch;
   Object.assign(process.env, {
     APP_ORIGIN: "https://example.test",
+    GOOP_OWNER_EMAIL: "owner@example.test",
     GOOGLE_CLIENT_ID: "test-client",
     GOOGLE_CLIENT_SECRET: "test-secret",
     SESSION_SECRET: "x".repeat(48),
@@ -15,6 +16,7 @@ test("OAuth route issues a PKCE cookie, verifies callback and syncs authorised r
     globalThis.fetch = oldFetch;
     for (const k of [
       "APP_ORIGIN",
+      "GOOP_OWNER_EMAIL",
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
       "SESSION_SECRET",
@@ -23,8 +25,16 @@ test("OAuth route issues a PKCE cookie, verifies callback and syncs authorised r
       else process.env[k] = original[k];
     }
   });
+  const gateCookie =
+    "goop_access=" +
+    seal(
+      { kind: "personal-access", exp: Date.now() + 60000 },
+      process.env.SESSION_SECRET,
+    );
   const login = await GET(
-    new Request("https://example.test/api/google?action=login"),
+    new Request("https://example.test/api/google?action=login", {
+      headers: { cookie: gateCookie },
+    }),
   );
   assert.equal(login.status, 302);
   const auth = new URL(login.headers.get("location"));
@@ -40,6 +50,11 @@ test("OAuth route issues a PKCE cookie, verifies callback and syncs authorised r
         access_token: "test-access",
         refresh_token: "test-refresh",
         scope: auth.searchParams.get("scope"),
+      });
+    if (String(url).includes("openidconnect.googleapis.com/v1/userinfo"))
+      return Response.json({
+        email: "owner@example.test",
+        email_verified: true,
       });
     if (String(url).endsWith("/identity")) return Response.json({});
     if (String(url).includes("dataTypes/steps/"))
@@ -61,7 +76,7 @@ test("OAuth route issues a PKCE cookie, verifies callback and syncs authorised r
   const callback = await GET(
     new Request(
       `https://example.test/api/google?action=callback&state=${flow.state}&code=test-code`,
-      { headers: { cookie: flowCookie } },
+      { headers: { cookie: flowCookie + "; " + gateCookie } },
     ),
   );
   assert.equal(callback.status, 302);
@@ -77,7 +92,7 @@ test("OAuth route issues a PKCE cookie, verifies callback and syncs authorised r
   );
   const synced = await GET(
     new Request("https://example.test/api/google?action=sync&timeZone=UTC", {
-      headers: { cookie: sessionCookie },
+      headers: { cookie: sessionCookie + "; " + gateCookie },
     }),
   );
   assert.equal(synced.status, 200);
@@ -88,8 +103,23 @@ test("OAuth route issues a PKCE cookie, verifies callback and syncs authorised r
   const denied = await GET(
     new Request(
       "https://example.test/api/google?action=callback&state=wrong&code=test-code",
-      { headers: { cookie: flowCookie } },
+      { headers: { cookie: flowCookie + "; " + gateCookie } },
     ),
   );
   assert.equal(denied.status, 400);
+  globalThis.fetch = async (url) =>
+    String(url).includes("oauth2.googleapis.com/token")
+      ? Response.json({ access_token: "test", refresh_token: "test" })
+      : Response.json({
+          email: "someone-else@example.test",
+          email_verified: true,
+        });
+  const wrongOwner = await GET(
+    new Request(
+      `https://example.test/api/google?action=callback&state=${flow.state}&code=test-code`,
+      { headers: { cookie: flowCookie + "; " + gateCookie } },
+    ),
+  );
+  assert.equal(wrongOwner.status, 403);
+  assert.ok(!wrongOwner.headers.get("set-cookie"));
 });

@@ -27,14 +27,23 @@ let enhancements = null,
 const $ = (s) => document.querySelector(s);
 const read = (key, fallback) => {
   try {
-    return JSON.parse(localStorage.getItem(`goop:${key}`)) ?? fallback;
+    return (
+      JSON.parse(
+        localStorage.getItem(
+          `${window.GOOPAccess?.unlocked ? "goop" : "goop-guest"}:${key}`,
+        ),
+      ) ?? fallback
+    );
   } catch {
     return fallback;
   }
 };
 const write = (key, value) => {
   try {
-    localStorage.setItem(`goop:${key}`, JSON.stringify(value));
+    localStorage.setItem(
+      `${window.GOOPAccess?.unlocked ? "goop" : "goop-guest"}:${key}`,
+      JSON.stringify(value),
+    );
     return true;
   } catch {
     toast("Storage unavailable. This change will last only for this visit.");
@@ -754,6 +763,13 @@ function plan() {
 }
 function more() {
   return `<div class="feature-hero"><h1>More</h1><p>GOOP · Your Fitbit, your daily view.</p></div>${[
+    [
+      "privacy-lock",
+      "profile",
+      window.GOOPAccess?.unlocked
+        ? "Lock personal data"
+        : "Unlock personal data",
+    ],
     ["profile", "profile", "My profile"],
     ["connections", "heart", "Google Health connection"],
     ["device", "settings", "My Fitbit Air"],
@@ -942,6 +958,10 @@ function tickLive(collect = true) {
 }
 const actions = {
   close,
+  "privacy-lock": () =>
+    window.GOOPAccess?.unlocked
+      ? window.GOOPAccess.lock()
+      : window.GOOPAccess.unlock(),
   "enable-gps": () => {
     if (gpsWatch !== null) {
       disableGPS();
@@ -1245,10 +1265,12 @@ const actions = {
     toast("Profile saved.");
   },
   device: () =>
-    !enhancements.isDemo() ? go("live-setup") : modal(
-      "Fitbit Air",
-      '<p><b>Demo device · Sample battery 86%</b></p><p>No device is paired with this demo. In the connected version, Fitbit Air syncs through Google Health and GOOP reads the authorised cloud data.</p><button class="primary full" data-action="connect">CONNECT GOOGLE HEALTH</button>',
-    ),
+    !enhancements.isDemo()
+      ? go("live-setup")
+      : modal(
+          "Fitbit Air",
+          '<p><b>Demo device · Sample battery 86%</b></p><p>No device is paired with this demo. In the connected version, Fitbit Air syncs through Google Health and GOOP reads the authorised cloud data.</p><button class="primary full" data-action="connect">CONNECT GOOGLE HEALTH</button>',
+        ),
   connect: () =>
     modal(
       "Connect Google Health",
