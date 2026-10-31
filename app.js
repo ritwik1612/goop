@@ -12,6 +12,8 @@ import {
   togglePause,
   summarizeSession,
 } from "./model.js";
+import { addLocation, workoutZoneTimes } from "./workout-data.js";
+import { createLiveHeartRate } from "./live-hr.js";
 import { createHealthspanSphere } from "./sphere.js";
 import {
   performanceChart,
@@ -59,7 +61,99 @@ let offset = 0,
   sphereFrame = 0,
   toastTimer,
   pendingActivity = null,
-  countdownTimer = null;
+  countdownTimer = null,
+  gpsWatch = null;
+const liveSensor = createLiveHeartRate({
+  onReading(reading) {
+    if (!session || session.paused || session.source !== "bluetooth") return;
+    const seconds = Math.floor(elapsed(session) / 1000);
+    const point = { seconds, hr: reading.bpm };
+    if (session.samples.at(-1)?.seconds === seconds)
+      session.samples[session.samples.length - 1] = point;
+    else session.samples.push(point);
+    if (session.samples.length > 10800) session.samples.shift();
+    session.lastSensorAt = reading.time;
+    tickLive(false);
+  },
+  onState(state) {
+    if (state.connected && session && session.source !== "bluetooth") {
+      session.source = "bluetooth";
+      session.samples = [];
+      write("session", session);
+    }
+    document
+      .querySelectorAll('[data-action="connect-sensor"]')
+      .forEach((button) => {
+        button.textContent = state.connected
+          ? "SENSOR CONNECTED ✓"
+          : state.connecting
+            ? "CONNECTING…"
+            : "CONNECT LIVE HEART RATE";
+        button.disabled = state.connecting || state.connected;
+      });
+    if (route() === "live" && $("#live-banner"))
+      $("#live-banner").textContent = sensorBanner();
+  },
+});
+function sensorBanner() {
+  const state = liveSensor.state();
+  if (session?.source === "bluetooth")
+    return state.connected
+      ? `BLUETOOTH · ${state.name} · real sensor readings`
+      : "SENSOR DISCONNECTED · Reconnect to resume live heart rate";
+  return session?.source === "simulated"
+    ? "DEMO · SIMULATED HEART RATE"
+    : "TIMER ONLY · Connect your Fitbit Air for live heart rate";
+}
+function sensorControls() {
+  const state = liveSensor.state();
+  return `<div class="sensor-controls"><button class="block-button full" data-action="connect-sensor" ${state.connected || state.connecting ? "disabled" : ""}>${state.connected ? "SENSOR CONNECTED ✓" : state.connecting ? "CONNECTING…" : "CONNECT LIVE HEART RATE"}</button><button class="sensor-help" data-route="live-setup">iPhone / Fitbit Air setup ›</button>${state.connected ? '<button class="sensor-help" data-action="disconnect-sensor">Disconnect sensor</button>' : ""}</div>`;
+}
+function liveSetup() {
+  return `<div class="feature-hero"><h1>Live Fitbit heart rate</h1><p>A direct Bluetooth connection.</p></div><section class="card"><h3>1. Enable sharing</h3><p class="note">Google Health → Connections → Fitbit Air → Share heart rate → Get started. Keep your band close and follow any pairing prompt.</p><h3>2. Open GOOP in a Bluetooth browser</h3><p class="note">On iPhone, open this website in Bluefy. Standard Safari and its Home Screen web app cannot use Web Bluetooth. No Mac or developer membership is required.</p><a class="block-button full" href="https://apps.apple.com/app/id1492822055" target="_blank" rel="noopener noreferrer">GET BLUEFY FOR IPHONE ↗</a><h3>3. Pair from GOOP</h3><p class="note">Tap Connect live heart rate and choose your Fitbit Air from the device list. Start a GOOP workout to record BPM, the live chart, zones and elapsed time.</p>${sensorControls()}</section><section class="card"><h3>What this connection supplies</h3><p class="note">Real-time heart rate from Fitbit. During a GOOP workout, optionally enable phone GPS for distance, speed and pace. Sleep, recovery inputs, steps and completed Google workouts still use Google Health sync. Live zones use a sample 190 bpm maximum; set your personal maximum before relying on them for training.</p><h3>Keep GOOP visible</h3><p class="note">iOS can suspend the browser when you lock the screen or switch apps. Continuous background recording is not guaranteed. The timer can resume; missing readings are not filled in.</p><h3>Google Health workout controls</h3><p class="note">Bluetooth heart-rate sharing does not expose the other app’s workout start/stop state. Start the GOOP timer separately. You may also record in Google Health, then sync its completed record later.</p><p class="note">If no sensor appears, enable sharing again, check Bluetooth permission, and disconnect other fitness equipment. Fitbit compatibility and firmware can affect pairing. This connection still needs testing with your physical Air.</p><a class="block-button full" href="https://support.google.com/googlehealth/answer/14236705?hl=en" target="_blank" rel="noopener noreferrer">FITBIT HEART-RATE SHARING GUIDE ↗</a></section>`;
+}
+function enableGPS() {
+  if (!session) return toast("Start a workout before enabling GPS.");
+  if (!navigator.geolocation)
+    return toast("This browser does not provide GPS.");
+  if (gpsWatch !== null) return;
+  gpsWatch = navigator.geolocation.watchPosition(
+    (position) => {
+      if (session && addLocation(session, position)) {
+        write("session", session);
+        tickLive(false);
+      }
+    },
+    (error) => {
+      toast(
+        error.code === 1
+          ? "Location permission was declined. GPS stays off."
+          : "GPS signal unavailable. Move outdoors and retry.",
+      );
+      disableGPS();
+    },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
+  );
+  toast("Requesting phone GPS. Keep GOOP visible.");
+}
+function disableGPS() {
+  if (gpsWatch !== null) navigator.geolocation.clearWatch(gpsWatch);
+  gpsWatch = null;
+  if (session) {
+    session.gpsLast = null;
+    session.gpsSpeed = null;
+  }
+}
+function recordedZoneBars(samples, maxHR) {
+  const times = workoutZoneTimes(samples, maxHR),
+    total = times.reduce((a, b) => a + b, 0) || 1;
+  return times
+    .map(
+      (seconds, i) =>
+        `<div class="recorded-zone"><span>ZONE ${i}</span><i style="--zone-width:${(seconds / total) * 100}%;--zone-color:${zoneColors[i]}"></i><b>${formatDuration(seconds)}</b></div>`,
+    )
+    .join("");
+}
 const icons = {
   home: "M3 10 12 3l9 7v11h-6v-7H9v7H3z M7 11l3-2 3 2 4-3",
   heart:
@@ -129,7 +223,7 @@ function dates() {
 function header(title = "") {
   const home = ["home", "health", "activities", "more"].includes(route());
   $("#header").innerHTML = home
-    ? `<button class="profile-button" data-action="profile" aria-label="Your profile">${icon("profile")}</button>${dates()}<button class="battery" data-action="device" aria-label="Fitbit Air demo device, 86 percent battery">86% <svg viewBox="0 0 22 32" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4" y="3" width="13" height="25" rx="6"/><path d="M8 0h5 M8 31h5 M7 8h7v13H7z"/><circle cx="18" cy="5" r="2.5" fill="#8ce1b5" stroke="none"/></svg></button>`
+    ? `<button class="profile-button" data-action="profile" aria-label="Your profile">${icon("profile")}</button>${dates()}<button class="battery" data-action="device" aria-label="${enhancements?.isDemo() ? "Demo Fitbit Air battery 86 percent" : "Device connections; battery unavailable"}">${enhancements?.isDemo() ? "86%" : "—"} <svg viewBox="0 0 22 32" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="4" y="3" width="13" height="25" rx="6"/><path d="M8 0h5 M8 31h5 M7 8h7v13H7z"/><circle cx="18" cy="5" r="2.5" fill="#8ce1b5" stroke="none"/></svg></button>`
     : `<button class="back-button" data-action="back" aria-label="Back">${icon("back")}</button><div class="header-title">${title || route().replaceAll("-", " ")}</div><button class="info-button" data-action="metric-info" aria-label="About this screen">${icon("info")}</button>`;
 }
 function nav() {
@@ -314,7 +408,7 @@ function monitors() {
 function activityRow(
   type = "Running",
   id = "sample-run",
-  strain = "12.4",
+  strain = "7.0",
   time = "07:34 AM",
   end = "08:16 AM",
 ) {
@@ -323,7 +417,7 @@ function activityRow(
 function home() {
   const d = sampleDay(offset);
   const saved = workouts.filter((w) => w.date === dayKey(offset));
-  return `<div class="wordmark personal-wordmark"><em>${esc(personalTitle(profile.name))}</em></div><div class="home-scores">${["sleep", "recovery", "strain"].map((t) => `<button class="score-link" data-route="${t}" aria-label="Open ${t}">${dial(t, d[t])}<span class="dial-label">${t.toUpperCase()}<span>›</span></span></button>`).join("")}</div>${metricRow("steps")}<div class="insight"><h3>${d.recovery >= 67 ? "Elevated HRV" : d.recovery >= 34 ? "A balanced day ahead" : "Time to recharge"}</h3><p>${d.recovery >= 67 ? "Your sample HRV is higher than your usual range. Explore how recovery, sleep, and activity come together in your daily overview." : "Your sample Recovery is below the green zone. Tap your Recovery dial to explore the contributing metrics."}</p></div>${monitors()}<h2 class="section-heading">My Day</h2><div class="outlook-row"><button class="outlook-button" data-route="coach">${icon("sun")}Your Daily Outlook<span>›</span></button></div><section class="card"><div class="card-label">TODAY’S ACTIVITIES<button data-route="activities" aria-label="Expand activities">↗</button></div><button class="activity-row" data-route="sleep"><span class="activity-number">${icon("sleep")}${minutesLabel(d.sleepMinutes)}</span><span class="activity-name">SLEEP</span><span class="activity-times">11:12 PM<br>07:30 AM</span></button>${activityRow("Running", "sample-run", "7.0")}${saved.map((w) => activityRow(w.type, w.id, "—", "Saved", w.source === "manual" ? "Manual" : "Demo")).join("")}<div class="dual-buttons"><button class="block-button" data-action="add-activity">${icon("plus")}ADD ACTIVITY</button><button class="block-button" data-action="start-activity">${icon("clock")}${session ? "RESUME ACTIVITY" : "START ACTIVITY"}</button></div></section><section class="card"><button class="card-label" style="width:100%;padding:0" data-action="sleep-plan">TONIGHT’S SLEEP <span class="chevron">›</span></button><div class="bedtime-row"><div><div class="bedtime-value"><span>☼</span>23:15</div><small>RECOMMENDED BEDTIME</small></div><span class="bedtime-divider"></span><div><div class="bedtime-value"><span>☼</span>${esc(profile.wake)}</div><small>WAKE TIME<br>(ALARM OFF)</small></div></div></section><button class="journal-home-tile" data-route="journal">${icon("journal")}<span><b>My Journal</b><small>Daily check-in</small></span><span>›</span></button><h2 class="section-heading">My Plan</h2><section class="card"><button class="card-label" style="width:100%;padding:0" data-route="plan">CUSTOM PLAN <span class="chevron">⌄</span></button><div class="note" style="margin:6px 0">3 days left</div><div class="plan-completion">57<small>% ACCOMPLISHED</small></div><div class="plan-track"><i></i></div></section><h2 class="section-heading">My Dashboard<button data-action="customize">CUSTOMIZE ✎</button></h2>${dashboard
+  return `<div class="wordmark personal-wordmark"><em>${esc(personalTitle(profile.name))}</em></div><div class="home-scores">${["sleep", "recovery", "strain"].map((t) => `<button class="score-link" data-route="${t}" aria-label="Open ${t}">${dial(t, d[t])}<span class="dial-label">${t.toUpperCase()}<span>›</span></span></button>`).join("")}</div>${metricRow("steps")}<div class="insight"><h3>${d.recovery >= 67 ? "Elevated HRV" : d.recovery >= 34 ? "A balanced day ahead" : "Time to recharge"}</h3><p>${d.recovery >= 67 ? "Your sample HRV is higher than your usual range. Explore how recovery, sleep, and activity come together in your daily overview." : "Your sample Recovery is below the green zone. Tap your Recovery dial to explore the contributing metrics."}</p></div>${monitors()}<h2 class="section-heading">My Day</h2><div class="outlook-row"><button class="outlook-button" data-route="coach">${icon("sun")}Your Daily Outlook<span>›</span></button></div><section class="card"><div class="card-label">TODAY’S ACTIVITIES<button data-route="activities" aria-label="Expand activities">↗</button></div><button class="activity-row" data-route="sleep"><span class="activity-number">${icon("sleep")}${minutesLabel(d.sleepMinutes)}</span><span class="activity-name">SLEEP</span><span class="activity-times">11:12 PM<br>07:30 AM</span></button>${activityRow("Running", "sample-run", "7.0")}${saved.map((w) => activityRow(w.type, w.id, "—", "Saved", w.source === "manual" ? "Manual" : w.source === "bluetooth" ? "Bluetooth" : w.source === "timer" ? "Timer" : "Demo")).join("")}<div class="dual-buttons"><button class="block-button" data-action="add-activity">${icon("plus")}ADD ACTIVITY</button><button class="block-button" data-action="start-activity">${icon("clock")}${session ? "RESUME ACTIVITY" : "START ACTIVITY"}</button></div></section><section class="card"><button class="card-label" style="width:100%;padding:0" data-action="sleep-plan">TONIGHT’S SLEEP <span class="chevron">›</span></button><div class="bedtime-row"><div><div class="bedtime-value"><span>☼</span>23:15</div><small>RECOMMENDED BEDTIME</small></div><span class="bedtime-divider"></span><div><div class="bedtime-value"><span>☼</span>${esc(profile.wake)}</div><small>WAKE TIME<br>(ALARM OFF)</small></div></div></section><button class="journal-home-tile" data-route="journal">${icon("journal")}<span><b>My Journal</b><small>Daily check-in</small></span><span>›</span></button><h2 class="section-heading">My Plan</h2><section class="card"><button class="card-label" style="width:100%;padding:0" data-route="plan">CUSTOM PLAN <span class="chevron">⌄</span></button><div class="note" style="margin:6px 0">3 days left</div><div class="plan-completion">57<small>% ACCOMPLISHED</small></div><div class="plan-track"><i></i></div></section><h2 class="section-heading">My Dashboard<button data-action="customize">CUSTOMIZE ✎</button></h2>${dashboard
     .filter((k) => k !== "steps")
     .map(metricRow)
     .join(
@@ -562,7 +656,7 @@ function workoutPage(id) {
   const w = getWorkout(id);
   if (!w)
     return `<div class="empty-card"><h3>Workout not found</h3><p>This activity may be stored in a different browser.</p><button class="primary" data-route="activities">ACTIVITY HISTORY</button></div>`;
-  return `<div class="workout-heading"><b>${w.strain ?? "—"}</b>${icon(w.type === "Weightlifting" ? "strength" : "run")}<span>${esc(w.type.toUpperCase())}<small>${w.source === "sample" ? "Today · Sample activity" : w.source === "manual" ? "Manual activity · Stored on this device" : "Simulated workout · Stored on this device"}</small></span></div><div class="detail-insight"><p>${w.source === "sample" ? "An example workout summary with your heart-rate curve, training zones, and activity statistics." : "This workout records your timer and " + (w.source === "manual" ? "manual inputs. No sensor readings were collected." : "simulated heart-rate samples. No Fitbit sensor readings were collected.")}</p></div><h3 class="chart-title">HEART RATE</h3><div class="chart-subtitle">${w.source === "sample" ? "07:34 AM – 08:16 AM" : "Session overview"}</div>${w.source === "manual" ? '<p class="note">No heart-rate data for this manual activity.</p>' : lineChart("heart", 90, w.samples?.length ? w.samples.map((s) => s.hr) : null)}<section class="workout-detail-panel"><h3>ACTIVITY STATISTICS</h3><div class="workout-metrics">${[
+  return `<div class="workout-heading"><b>${w.strain ?? "—"}</b>${icon(w.type === "Weightlifting" ? "strength" : "run")}<span>${esc(w.type.toUpperCase())}<small>${w.source === "sample" ? "Today · Sample activity" : w.source === "manual" ? "Manual activity · Stored on this device" : w.source === "bluetooth" ? "Bluetooth workout · Stored on this device" : w.source === "timer" ? "Local timer · Stored on this device" : "Simulated workout · Stored on this device"}</small></span></div><div class="detail-insight"><p>${w.source === "sample" ? "An example workout summary with your heart-rate curve, training zones, and activity statistics." : "This workout records your timer and " + (w.source === "manual" ? "manual inputs. No sensor readings were collected." : w.source === "bluetooth" ? "real Bluetooth heart-rate samples." : w.source === "timer" ? "elapsed time only. No sensor readings were collected." : "simulated heart-rate samples. No Fitbit sensor readings were collected.")}</p></div><h3 class="chart-title">HEART RATE</h3><div class="chart-subtitle">${w.source === "sample" ? "07:34 AM – 08:16 AM" : "Session overview"}</div>${w.source === "sample" || w.samples?.length ? lineChart("heart", 90, w.samples?.length ? w.samples.map((s) => s.hr) : null) : '<p class="note">No heart-rate samples were recorded.</p>'}<section class="workout-detail-panel"><h3>ACTIVITY STATISTICS</h3><div class="workout-metrics">${[
     ["fire", "CALORIES", w.calories ?? "—"],
     ["heart", "AVG HR", w.avgHR ?? "—"],
     ["pulse", "MAX HR", w.maxHR ?? "—"],
@@ -571,10 +665,10 @@ function workoutPage(id) {
     .map(([i, n, v]) => `<div>${icon(i)}<small>${n}</small><b>${v}</b></div>`)
     .join(
       "",
-    )}</div></section>${w.source === "sample" ? `<h3 class="section-label">HEART RATE ZONES</h3>${zoneBars()}<div class="card"><div class="plan-item"><span>Distance</span><b>5.21 km</b></div><div class="plan-item"><span>Average pace</span><b>8:04 /km</b></div><div class="plan-item"><span>Activity strain</span><b>7.0</b></div></div>` : ""}${w.sets?.length ? `<h3 class="section-label">STRENGTH TRAINER</h3>${w.sets.map((s) => `<div class="plan-item"><span>${esc(s.exercise)}</span><b>${esc(s.weight)} kg × ${esc(s.reps)}</b></div>`).join("")}` : ""}<button class="block-button full" data-action="export-workout" data-id="${esc(id)}">${icon("share")}EXPORT WORKOUT</button>`;
+    )}</div></section>${w.source === "sample" ? `<h3 class="section-label">HEART RATE ZONES</h3>${zoneBars()}<div class="card"><div class="plan-item"><span>Distance</span><b>5.21 km</b></div><div class="plan-item"><span>Average pace</span><b>8:04 /km</b></div><div class="plan-item"><span>Activity strain</span><b>7.0</b></div></div>` : `<h3 class="section-label">RECORDED ZONES</h3>${recordedZoneBars(w.samples || [], w.maxHeartRate || 190)}${w.distanceKm != null ? `<div class="card"><div class="plan-item"><span>Phone GPS distance</span><b>${w.distanceKm.toFixed(2)} km</b></div></div>` : ""}`}${w.sets?.length ? `<h3 class="section-label">STRENGTH TRAINER</h3>${w.sets.map((s) => `<div class="plan-item"><span>${esc(s.exercise)}</span><b>${esc(s.weight)} kg × ${esc(s.reps)}</b></div>`).join("")}` : ""}<button class="block-button full" data-action="export-workout" data-id="${esc(id)}">${icon("share")}EXPORT WORKOUT</button>`;
 }
 function activityLaunch() {
-  return `<section class="activity-launch"><span class="section-label">YOUR NEXT SESSION</span><h1>Let’s move.</h1><p>Choose your activity. Find your rhythm.</p><button class="primary full start-workout-button" data-action="start-activity">${icon(session ? "clock" : "run")}${session ? "RESUME WORKOUT" : "START A WORKOUT"}<span>›</span></button><div class="quick-sports">${["Running", "Walking", "Cycling", "Weightlifting"].map((type) => `<button data-action="prepare-activity" data-type="${type}">${icon(type === "Cycling" ? "bike" : type === "Weightlifting" ? "strength" : "run")}<span>${type}</span></button>`).join("")}</div><button class="block-button full" data-action="add-activity">${icon("plus")}LOG A PAST ACTIVITY</button></section>`;
+  return `${sensorControls()}<section class="activity-launch"><span class="section-label">YOUR NEXT SESSION</span><h1>Let’s move.</h1><p>Choose your activity. Find your rhythm.</p><button class="primary full start-workout-button" data-action="start-activity">${icon(session ? "clock" : "run")}${session ? "RESUME WORKOUT" : "START A WORKOUT"}<span>›</span></button><div class="quick-sports">${["Running", "Walking", "Cycling", "Weightlifting"].map((type) => `<button data-action="prepare-activity" data-type="${type}">${icon(type === "Cycling" ? "bike" : type === "Weightlifting" ? "strength" : "run")}<span>${type}</span></button>`).join("")}</div><button class="block-button full" data-action="add-activity">${icon("plus")}LOG A PAST ACTIVITY</button></section>`;
 }
 function countdownPage() {
   if (!pendingActivity)
@@ -582,17 +676,25 @@ function countdownPage() {
   return `<div class="workout-countdown"><span class="section-label">${esc(pendingActivity.type.toUpperCase())}</span><h1>Get ready</h1><div class="countdown-ring"><strong id="countdown-number" aria-live="assertive" aria-atomic="true">3</strong></div><p>Your workout starts after the countdown.</p><button class="block-button" data-action="cancel-countdown">CANCEL</button></div>`;
 }
 function activities() {
-  return `${activityLaunch()}<h2 class="section-heading">Activity history</h2><h3 class="section-label">TODAY · SAMPLE ACTIVITIES</h3>${activityRow()}${activityRow("Weightlifting", "sample-strength", "8.6", "06:15 PM", "07:02 PM")}${workouts.length ? '<h3 class="section-label">YOUR DEMO & MANUAL SESSIONS</h3>' + workouts.map((w) => activityRow(w.type, w.id, "—", formatDuration(w.seconds), w.source === "manual" ? "Manual" : "Demo")).join("") : ""}<div class="dual-buttons"><button class="block-button" data-action="add-activity">ADD ACTIVITY</button><button class="block-button" data-action="start-activity">${session ? "RESUME" : "START"} ACTIVITY</button></div>`;
+  return `${activityLaunch()}<h2 class="section-heading">Activity history</h2><h3 class="section-label">TODAY · SAMPLE ACTIVITIES</h3>${activityRow()}${activityRow("Weightlifting", "sample-strength", "8.6", "06:15 PM", "07:02 PM")}${workouts.length ? '<h3 class="section-label">YOUR DEMO & MANUAL SESSIONS</h3>' + workouts.map((w) => activityRow(w.type, w.id, "—", formatDuration(w.seconds), w.source === "manual" ? "Manual" : w.source === "bluetooth" ? "Bluetooth" : w.source === "timer" ? "Timer" : "Demo")).join("") : ""}<div class="dual-buttons"><button class="block-button" data-action="add-activity">ADD ACTIVITY</button><button class="block-button" data-action="start-activity">${session ? "RESUME" : "START"} ACTIVITY</button></div>`;
 }
 function live() {
   if (!session)
-    return `<div class="empty-card"><h3>Ready when you are</h3><p>Preview a live workout with a working timer and simulated heart rate.</p><button class="primary" data-action="start-activity">CHOOSE AN ACTIVITY</button></div>`;
-  return `<div class="live-type">${esc(session.type.toUpperCase())}</div><div class="live-time" id="live-time">${formatDuration(elapsed(session) / 1000)}</div><div class="live-time-label" id="live-status">${session.paused ? "PAUSED" : "DURATION"}</div><div class="live-banner">SIMULATED HEART RATE · No Fitbit connected<br>iPhone web apps cannot read Fitbit Bluetooth directly.</div><section class="live-panel"><div class="live-row"><span class="live-panel-label">HEART RATE</span><div class="live-heart">${icon("heart")}<span id="live-hr">—</span><small>bpm</small></div></div><div class="live-zone-track" id="live-zones" style="--position:50%">${zoneColors
+    return `<div class="empty-card"><h3>Ready when you are</h3><p>Connect a heart-rate sensor and choose an activity to begin.</p><button class="primary" data-action="start-activity">CHOOSE AN ACTIVITY</button></div>`;
+  return `<div class="live-type">${esc(session.type.toUpperCase())}</div><div class="live-time" id="live-time">${formatDuration(elapsed(session) / 1000)}</div><div class="live-time-label" id="live-status">${session.paused ? "PAUSED" : "DURATION"}</div><div class="live-banner" id="live-banner">${esc(sensorBanner())}</div>${sensorControls()}<section class="live-panel"><div class="live-row"><span class="live-panel-label">HEART RATE</span><div class="live-heart">${icon("heart")}<span id="live-hr">—</span><small>bpm</small></div></div><div class="live-zone-track" id="live-zones" style="--position:50%">${zoneColors
     .slice(1)
     .map((c) => `<i style="--color:${c}"></i>`)
     .join(
       "",
-    )}</div><div class="live-zone-labels">${[1, 2, 3, 4, 5].map((z) => `<span data-zone="${z}">Zone ${z}</span>`).join("")}</div><p id="live-level" class="live-level">Activity level</p><div class="live-stats"><div><b id="live-distance">—<small>km</small></b><small>DISTANCE</small></div><div><b id="live-strain">—</b><small>STRAIN</small></div></div></section><h3 class="chart-title">HEART RATE · SIMULATED</h3><div id="live-chart">${lineChart("heart", 2, [110, 110])}</div><div class="live-controls"><button data-action="pause" id="pause-button">${session.paused ? "RESUME" : "PAUSE"}</button><button class="finish" data-action="finish">FINISH</button></div>${session.type === "Weightlifting" ? strengthEditor() : ""}<p class="note">The timer works across screen changes and reloads. Distance and strain remain unavailable because no real sensor data is connected.</p>`;
+    )}</div><div class="live-zone-labels">${[1, 2, 3, 4, 5].map((z) => `<span data-zone="${z}">Zone ${z}</span>`).join("")}</div><p id="live-level" class="live-level">Activity level</p><div class="live-stats"><div><b id="live-distance">—<small>km</small></b><small>DISTANCE</small></div><div><b id="live-strain">—</b><small>STRAIN</small></div></div></section><h3 class="chart-title">HEART RATE ${session.source === "simulated" ? "· SIMULATED" : ""}</h3><div id="live-chart">${
+    session.samples.length
+      ? lineChart(
+          "heart",
+          2,
+          session.samples.slice(-90).map((s) => s.hr),
+        )
+      : '<p class="note">Waiting for heart-rate readings.</p>'
+  }</div><div class="live-extra-stats"><div><small>AVG BPM</small><b id="live-average">—</b></div><div><small>MAX BPM</small><b id="live-maximum">—</b></div><div><small>SPEED · KM/H</small><b id="live-speed">—</b></div><div><small>AVG PACE</small><b id="live-pace">—</b></div></div><button class="block-button full" data-action="enable-gps">ENABLE PHONE GPS</button><p class="data-note">GPS stays on this device. Keep the page visible. Heart-rate zones use max ${profile.maxHR || 190} bpm; change it in your profile.</p><h3 class="section-label">TIME IN ZONES</h3><div id="live-zone-times"></div><div class="live-controls"><button data-action="pause" id="pause-button">${session.paused ? "RESUME" : "PAUSE"}</button><button class="finish" data-action="finish">FINISH</button></div>${session.type === "Weightlifting" ? strengthEditor() : ""}<p class="note">The timer works across screen changes and reloads. Distance and strain are not supplied by the Bluetooth heart-rate service. Keep this page visible to receive readings.</p>`;
 }
 function strengthEditor() {
   return `<h3 class="section-label">STRENGTH TRAINER</h3><div class="card"><label class="settings-label" for="exercise">EXERCISE</label><select id="exercise"><option>Bench press</option><option>Squat</option><option>Deadlift</option><option>Overhead press</option><option>Row</option></select><table class="sets-table"><thead><tr><th>SET</th><th>KG</th><th>REPS</th><th>LOG</th></tr></thead><tbody><tr><td>${session.sets.length + 1}</td><td><input aria-label="Set weight in kilograms" id="set-weight" type="number" value="40" min="0" max="500"></td><td><input aria-label="Set repetitions" id="set-reps" type="number" value="10" min="1" max="100"></td><td><button data-action="log-set" class="primary">✓</button></td></tr></tbody></table><div id="logged-sets">${session.sets.map((s, i) => `<div class="plan-item"><span>${i + 1}. ${esc(s.exercise)}</span><b>${s.weight} kg × ${s.reps}</b></div>`).join("")}</div></div>`;
@@ -681,6 +783,7 @@ function render() {
   const r = route();
   let title = r;
   const pages = {
+    "live-setup": liveSetup,
     countdown: countdownPage,
     widgets: () => enhancements.widgets(),
     steps: () => "",
@@ -757,7 +860,11 @@ function download(name, data) {
 function tickLive(collect = true) {
   if (!session) return;
   const seconds = elapsed(session) / 1000;
-  if (collect && !session.paused) {
+  const gpsButton = document.querySelector('[data-action="enable-gps"]');
+  if (gpsButton)
+    gpsButton.textContent =
+      gpsWatch === null ? "ENABLE PHONE GPS" : "STOP PHONE GPS";
+  if (collect && !session.paused && session.source === "simulated") {
     const hr = Math.round(
       126 + Math.sin(seconds / 15) * 18 + Math.sin(seconds / 4) * 5,
     );
@@ -769,24 +876,64 @@ function tickLive(collect = true) {
     }
   }
   if (route() !== "live" || !$("#live-time")) return;
-  const hr = session.samples.at(-1)?.hr ?? 126;
+  if (collect && Math.floor(seconds) % 5 === 0) write("session", session);
+  const sensor = liveSensor.state();
+  const hr =
+    session.source === "simulated"
+      ? (session.samples.at(-1)?.hr ?? 126)
+      : sensor.connected &&
+          sensor.latest &&
+          Date.now() - sensor.latest.time < 15000
+        ? sensor.latest.bpm
+        : null;
   $("#live-time").textContent = formatDuration(seconds);
   $("#live-status").textContent = session.paused ? "PAUSED" : "DURATION";
-  $("#live-hr").textContent = hr;
-  const zone = heartZone(hr),
+  $("#live-hr").textContent = hr ?? "—";
+  $("#live-zones").classList.toggle("no-reading", hr === null);
+  const zone = hr === null ? null : heartZone(hr, profile.maxHR || 190),
     levels = ["Resting", "Very light", "Light", "Moderate", "Hard", "Maximum"];
   if ($("#live-level"))
-    $("#live-level").textContent = `${levels[zone]} · Zone ${zone}`;
+    $("#live-level").textContent =
+      zone === null
+        ? "Waiting for live sensor"
+        : `${levels[zone]} · Zone ${zone}`;
   $("#live-zones").style.setProperty(
     "--position",
-    `${Math.min(98, Math.max(2, (hr / 190 - 0.5) * 200))}%`,
+    `${Math.min(98, Math.max(2, (hr / (profile.maxHR || 190) - 0.5) * 200))}%`,
   );
   document
     .querySelectorAll("[data-zone]")
     .forEach((e) =>
-      e.classList.toggle("current", Number(e.dataset.zone) === heartZone(hr)),
+      e.classList.toggle(
+        "current",
+        hr !== null &&
+          Number(e.dataset.zone) === heartZone(hr, profile.maxHR || 190),
+      ),
     );
-  if (collect && Math.floor(seconds) % 3 === 0 && session.samples.length > 1)
+  if ($("#live-distance"))
+    $("#live-distance").innerHTML =
+      `${session.gpsEnabled ? ((session.distanceM || 0) / 1000).toFixed(2) : "—"}<small>km</small>`;
+  const values = session.samples.map((p) => p.hr);
+  if ($("#live-average"))
+    $("#live-average").textContent = values.length
+      ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+      : "—";
+  if ($("#live-maximum"))
+    $("#live-maximum").textContent = values.length ? Math.max(...values) : "—";
+  if ($("#live-speed"))
+    $("#live-speed").textContent =
+      session.gpsSpeed == null ? "—" : session.gpsSpeed.toFixed(1);
+  if ($("#live-pace"))
+    $("#live-pace").textContent =
+      session.distanceM > 0
+        ? `${formatDuration(seconds / (session.distanceM / 1000))} /km`
+        : "—";
+  if ($("#live-zone-times"))
+    $("#live-zone-times").innerHTML = recordedZoneBars(
+      session.samples,
+      profile.maxHR || 190,
+    );
+  if (session.samples.length > 1)
     $("#live-chart").innerHTML = lineChart(
       "heart",
       2,
@@ -795,6 +942,34 @@ function tickLive(collect = true) {
 }
 const actions = {
   close,
+  "enable-gps": () => {
+    if (gpsWatch !== null) {
+      disableGPS();
+      render();
+    } else enableGPS();
+  },
+  "connect-sensor": async () => {
+    if (!liveSensor.state().supported) {
+      close();
+      go("live-setup");
+      toast("Use Bluefy on iPhone for live Bluetooth.");
+      return;
+    }
+    try {
+      await liveSensor.connect();
+      toast("Live heart-rate sensor connected.");
+      if (route() === "live") render();
+    } catch (error) {
+      toast(
+        error.message ||
+          "Bluetooth connection failed. Try sharing heart rate again.",
+      );
+    }
+  },
+  "disconnect-sensor": () => {
+    liveSensor.disconnect();
+    render();
+  },
   "prev-day": () => {
     offset = Math.max(-180, offset - 1);
     render();
@@ -907,7 +1082,16 @@ const actions = {
       go("live");
       return;
     }
-    session = newSession(el.dataset.type);
+    session = newSession(
+      el.dataset.type,
+      Date.now(),
+      liveSensor.state().connected
+        ? "bluetooth"
+        : enhancements.isDemo()
+          ? "simulated"
+          : "timer",
+    );
+    session.maxHeartRate = profile.maxHR || 190;
     write("session", session);
     close();
     go("live");
@@ -915,6 +1099,8 @@ const actions = {
   pause: () => {
     if (!session) return;
     togglePause(session);
+    session.gpsLast = null;
+    session.gpsSpeed = null;
     write("session", session);
     $("#pause-button").textContent = session.paused ? "RESUME" : "PAUSE";
     tickLive(false);
@@ -922,18 +1108,19 @@ const actions = {
   finish: () =>
     modal(
       "Finish your activity?",
-      '<p>Your elapsed time and simulated heart-rate samples will be saved to this device. Distance, calories and strain are not estimated without actual data.</p><button class="primary full" data-action="save-workout">FINISH & SAVE</button><button class="block-button full" style="margin-top:12px" data-action="close">KEEP GOING</button>',
+      '<p>Your elapsed time and available heart-rate samples will be saved to this device. Distance, calories and strain are not estimated without actual data.</p><button class="primary full" data-action="save-workout">FINISH & SAVE</button><button class="block-button full" style="margin-top:12px" data-action="close">KEEP GOING</button>',
     ),
   "save-workout": () => {
     if (!session) return;
     const summary = summarizeSession(session);
     workouts.unshift(summary);
     write("workouts", workouts);
+    disableGPS();
     session = null;
     write("session", null);
     close();
     go(`workout/${summary.id}`);
-    toast("Demo workout saved on this device.");
+    toast("Workout saved on this device.");
   },
   "log-set": () => {
     if (!session) return;
@@ -1043,9 +1230,14 @@ const actions = {
   profile: () =>
     modal(
       "Your profile",
-      `<label class="settings-label" for="profile-name">DISPLAY NAME</label><input id="profile-name" class="text-field" maxlength="40" value="${esc(profile.name)}"><p>Profile settings stay on this device. No Google account is connected.</p><button class="primary full" data-action="save-profile">SAVE PROFILE</button>`,
+      `<label class="settings-label" for="profile-name">DISPLAY NAME</label><input id="profile-name" class="text-field" maxlength="40" value="${esc(profile.name)}"><label class="settings-label" for="profile-max-hr">MAXIMUM HEART RATE · BPM</label><input class="text-field" id="profile-max-hr" type="number" min="100" max="240" value="${profile.maxHR || 190}"><p>Your display name stays on this device. Manage Google Health access in Connections.</p><button class="primary full" data-action="save-profile">SAVE PROFILE</button>`,
     ),
   "save-profile": () => {
+    const maximum = Number($("#profile-max-hr").value);
+    if (!Number.isFinite(maximum) || maximum < 100 || maximum > 240)
+      return toast("Enter a maximum heart rate from 100 to 240 bpm.");
+    profile.maxHR = maximum;
+    if (session) session.maxHeartRate = maximum;
     profile.name = $("#profile-name").value.trim() || "Your profile";
     write("profile", profile);
     close();
@@ -1053,7 +1245,7 @@ const actions = {
     toast("Profile saved.");
   },
   device: () =>
-    modal(
+    !enhancements.isDemo() ? go("live-setup") : modal(
       "Fitbit Air",
       '<p><b>Demo device · Sample battery 86%</b></p><p>No device is paired with this demo. In the connected version, Fitbit Air syncs through Google Health and GOOP reads the authorised cloud data.</p><button class="primary full" data-action="connect">CONNECT GOOGLE HEALTH</button>',
     ),
@@ -1065,7 +1257,7 @@ const actions = {
   install: () =>
     modal(
       "Add GOOP to your iPhone",
-      "<ol><li>Open the deployed GOOP link in Safari.</li><li>Tap Share, then Add to Home Screen.</li><li>Keep Open as Web App enabled, then tap Add.</li></ol><p>This local preview is only accessible on this computer. Deployment is on hold for your design review.</p>",
+      "<ol><li>Open the deployed GOOP link in Safari.</li><li>Tap Share, then Add to Home Screen.</li><li>Keep Open as Web App enabled, then tap Add.</li></ol><p>For live Bluetooth workouts, open GOOP in Bluefy instead. Safari Home Screen mode is suitable for viewing synced health data and local logs.</p>",
     ),
   "sleep-plan": () =>
     modal(
@@ -1135,6 +1327,7 @@ enhancements = createEnhancements({
   dashboard: () => dashboard,
   displayTitle: () => personalTitle(profile.name),
   activityLaunch,
+  localWorkouts: () => workouts,
 });
 Object.assign(actions, enhancements.actions);
 document.addEventListener("click", (event) => {

@@ -7,25 +7,6 @@ export function createHealthspanSphere(canvas) {
   canvas.width = size;
   canvas.height = size;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  let seed = 197671;
-  const random = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-  const particles = Array.from({ length: 1450 }, () => {
-    const z = random() * 2 - 1;
-    const angle = random() * Math.PI * 2;
-    const radius = 213 + random() * 22;
-    const plane = Math.sqrt(1 - z * z);
-    return {
-      x: Math.cos(angle) * plane * radius,
-      y: Math.sin(angle) * plane * radius,
-      z: z * radius,
-      size: 1.05 + Math.pow(random(), 2) * 2.0,
-      phase: random() * Math.PI * 2,
-      brightness: random(),
-    };
-  });
   let frame = 0,
     stopped = false,
     last = 0,

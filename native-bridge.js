@@ -13,7 +13,7 @@ export function publishWidgetSnapshot({ mode, day, date, session }) {
         elapsed: session.elapsedMs / 1000,
         paused: session.paused,
         heartRate: session.samples.at(-1)?.hr ?? null,
-        simulated: true,
+        simulated: session.source === "simulated",
       }
     : null;
   return sendNative("snapshot", {

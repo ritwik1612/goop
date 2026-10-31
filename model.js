@@ -55,7 +55,7 @@ export function escapeHTML(value) {
       ],
   );
 }
-export function newSession(type, now = Date.now()) {
+export function newSession(type, now = Date.now(), source = "simulated") {
   return {
     type,
     startedAt: now,
@@ -64,7 +64,7 @@ export function newSession(type, now = Date.now()) {
     paused: false,
     samples: [],
     sets: [],
-    source: "simulated",
+    source,
   };
 }
 export function elapsed(session, now = Date.now()) {
@@ -97,9 +97,11 @@ export function summarizeSession(session, now = Date.now()) {
     maxHR: hrs.length ? Math.max(...hrs) : null,
     samples: session.samples,
     sets: session.sets,
-    source: "simulated",
+    source: session.source || "simulated",
     date: dayKey(),
     calories: null,
     strain: null,
+    distanceKm: session.gpsEnabled ? (session.distanceM || 0) / 1000 : null,
+    maxHeartRate: session.maxHeartRate || 190,
   };
 }

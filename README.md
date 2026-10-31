@@ -50,6 +50,20 @@ The checks cover workout timing, escaping, Google measurement/nutrition/weight p
 
 `npm run build` copies only app assets into `public/`. Server code, tests, native source and environment files are not copied into the public site. The function under `api/` stays server-side.
 
+## Live Fitbit Air workouts on iPhone
+
+GOOP includes a direct Web Bluetooth Heart Rate Profile reader (service `0x180D`, characteristic `0x2A37`). This is separate from Google cloud sync. Google documents Fitbit Air [heart-rate sharing](https://support.google.com/googlehealth/answer/14236705?hl=en). A community [GitHub implementation](https://github.com/AyushSagar16/fitbit-air) and [Reddit example](https://www.reddit.com/r/FitbitAir/comments/1ve0b51/the_air_can_broadcast_live_heart_rate_so_i_built/) also describe this approach; they are research references, not bundled dependencies.
+
+1. On iPhone, install [Bluefy](https://apps.apple.com/app/id1492822055), a browser that supplies Web Bluetooth. Safari and its Home Screen PWA cannot access this service. No Mac or developer membership is needed for Bluefy.
+2. In Google Health, choose Connections → Fitbit Air → Share heart rate → Get started.
+3. Open your own GOOP website in Bluefy. Choose Activities → Connect live heart rate and select your Air.
+4. Choose the activity and start the countdown. Real BLE readings supply BPM, a chart, average/max heart rate and observed time in zones. Set your maximum heart rate in Profile; the initial 190 bpm is a sample threshold, not a personalised assessment.
+5. For outdoor workouts, tap Enable phone GPS and grant location permission. Distance, speed and average pace use your phone, not the band. GPS fixes remain on this device; export currently includes distance rather than the raw route.
+
+Keep GOOP visible. iOS may suspend Bluetooth/GPS while the browser is backgrounded or the phone is locked. Missing heart-rate intervals are not filled with synthetic values. Pairing and physical-device behaviour have not been verified with an actual Air in this development environment. The parser, GATT notification lifecycle, gap handling, GPS filtering and source provenance have automated checks.
+
+Bluetooth carries heart rate, not sleep, steps, proprietary scores or the Google app's workout controls. Start/stop the GOOP timer separately. My Data without a sensor records a timer only; simulated heart rate is confined to Demo sessions. Calories and Strain are not invented from the sensor feed.
+
 ## Host your own copy
 
 1. Fork this repository into your own GitHub account.
@@ -59,6 +73,8 @@ The checks cover workout timing, escaping, Google measurement/nutrition/weight p
 5. Configure Google OAuth against your own application's origin. Each independent installation needs its own configuration.
 
 There is deliberately no Deploy button linked to an author's instance and no personal deployment URL in this repository.
+
+Workouts recorded in Google Health are imported after syncing. My Data refreshes on reopening and every five minutes while visible. GOOP cannot remotely start or stop the Fitbit/Google Health tracker. Local GOOP timer sessions are not written to Google Health.
 
 ## Google Health connection — complete setup
 

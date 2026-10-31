@@ -4,7 +4,10 @@ import { heartRateChart } from "./charts.js";
 export function connectedView(route, ctx) {
   const { sources, preferred, date, icon, dial, metricRow } = ctx;
   const d = combineDay(sources, date, preferred),
-    allWorkouts = sources.flatMap((s) => s.workouts ?? []),
+    allWorkouts = [
+      ...sources.flatMap((s) => s.workouts ?? []),
+      ...(ctx.localWorkouts || []),
+    ],
     current = allWorkouts.filter((w) => w.date === date);
   const missing = '<span class="no-reading">No reading</span>';
   const sourceNote = (key) =>
@@ -16,7 +19,7 @@ export function connectedView(route, ctx) {
   const tile = (key, label, unit) =>
     `<button class="stat-tile" data-action="metric" data-key="${key}"><span class="tile-title">${icon(key === "resp" ? "lungs" : key === "spo2" ? "drop" : key === "temp" ? "temp" : key === "hrv" ? "pulse" : "heart")}${label}</span><div class="tile-value">${d[key] === null ? "—" : Number(d[key]).toFixed(["resp", "temp", "vo2"].includes(key) ? 1 : 0)}<span>${unit}</span></div>${sourceNote(key)}</button>`;
   const activity = (w) =>
-    `<button class="activity-row" data-route="workout/${esc(w.id)}"><span class="activity-number workout">${icon("run")}${Math.round(w.seconds / 60)}<small style="font:9px var(--font)">MIN</small></span><span class="activity-name">${esc(w.type.toUpperCase())}</span><span class="activity-times">GOOGLE HEALTH</span></button>`;
+    `<button class="activity-row" data-route="workout/${esc(w.id)}"><span class="activity-number workout">${icon("run")}${Math.round(w.seconds / 60)}<small style="font:9px var(--font)">MIN</small></span><span class="activity-name">${esc(w.type.toUpperCase())}</span><span class="activity-times">${w.source === "google" ? "GOOGLE HEALTH" : w.source === "bluetooth" ? "BLUETOOTH" : "LOCAL"}</span></button>`;
   if (route === "home")
     return `<div class="wordmark personal-wordmark"><em>${esc(ctx.displayTitle || "Your Fitbit")}</em></div><div class="home-scores">${["sleep", "recovery", "strain"].map((t) => `<button class="score-link" data-route="${t}">${dial(t, null)}<span class="dial-label">${t.toUpperCase()} ›</span></button>`).join("")}</div>${metricRow("steps")}<div class="insight"><h3>Your measurements, together</h3><p>${sources.length ? "Your authorised Google Health records are shown below. Proprietary scores stay empty until a GOOP scoring model is implemented." : "Connect Google Health to bring your Fitbit measurements into GOOP."}</p></div><button class="block-button full" data-route="connections">${icon("heart")}${sources.length ? "MANAGE CONNECTION & SYNC" : "CONNECT GOOGLE HEALTH"}</button><h2 class="section-heading">My Day</h2><section class="card"><div class="card-label">ACTIVITIES · ${esc(date)}</div>${d.sleepMinutes !== null ? `<button class="activity-row" data-route="sleep"><span class="activity-number">${icon("sleep")}${minutesLabel(Math.round(d.sleepMinutes))}</span><span class="activity-name">SLEEP</span></button>` : '<p class="data-note">No sleep record for this day.</p>'}${current.map(activity).join("")}<div class="dual-buttons"><button class="block-button" data-action="add-activity">ADD ACTIVITY</button><button class="block-button" data-action="start-activity">START TIMER</button></div></section><button class="journal-home-tile" data-route="journal">${icon("journal")}<span><b>My Journal</b><small>Daily check-in</small></span><span>›</span></button><h2 class="section-heading">My Dashboard<button data-action="customize">CUSTOMIZE ✎</button></h2>${ctx.dashboard
       .filter((k) => k !== "steps")
@@ -84,7 +87,7 @@ export function connectedView(route, ctx) {
   if (route.startsWith("workout/")) {
     const id = route.slice(8),
       w = allWorkouts.find((w) => w.id === id);
-    if (!w) return null;
+    if (!w || w.source !== "google") return null;
     return `<div class="workout-heading">${icon("run")}<span>${esc(w.type.toUpperCase())}<small>Google Health · ${esc(w.date)}</small></span></div><h3 class="chart-title">HEART RATE</h3>${
       w.samples?.length
         ? heartRateChart(

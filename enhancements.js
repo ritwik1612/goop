@@ -155,22 +155,26 @@ export function createEnhancements(ctx) {
     });
   function updateRibbon() {
     publishNow();
+    const realWorkout =
+      route() === "live" && ctx.getSession()?.source === "bluetooth";
     if (document.querySelector(".sample-footer"))
-      document.querySelector(".sample-footer").textContent =
-        mode === "demo"
+      document.querySelector(".sample-footer").textContent = realWorkout
+        ? "BLUETOOTH HEART RATE · LOCAL WORKOUT"
+        : mode === "demo"
           ? "DEMO · SAMPLE METRICS · LOCAL LOGS SAVED"
           : "GOOP · RECORDED MEASUREMENTS · NO INVENTED SCORES";
     const el = $(".demo-ribbon");
     if (el)
-      el.innerHTML =
-        mode === "demo"
-          ? "GOOP DESIGN PREVIEW <span>Demo metrics · Local logs saved</span>"
+      el.innerHTML = realWorkout
+        ? "GOOP <span>Bluetooth workout · Real sensor feed</span>"
+        : mode === "demo"
+          ? "GOOP <span>Demo metrics · Local logs saved</span>"
           : `GOOP <span>${sources.length ? "Google Health · Recorded measurements" : "My Data · Not connected"}</span>`;
   }
   function connectionGuide() {
     const callback =
       status.callback || `${location.origin}/api/google?action=callback`;
-    return `<div class="feature-hero"><h1>Connect Google Health</h1><p>A one-time setup, then sign in and sync.</p></div><section class="card"><h3>1. Sync your Fitbit</h3><p class="note">Open Google Health on your phone, sign in to your Fitbit-linked Google account, and sync your device. Confirm your sleep and activity data are visible there.</p><h3>2. Connect your account</h3><p class="note">Return to GOOP → More → Connections → Connect account. Choose the same Google account. Google handles your password; GOOP never sees it.</p><h3>3. Allow read access</h3><p class="note">Activity & fitness brings steps and workouts. Sleep brings your sleep history. Health metrics brings HRV, resting heart rate, breathing, oxygen, temperature and weight when available. You can decline permissions; affected measurements stay empty.</p><h3>4. See your measurements</h3><p class="note">After sign-in, GOOP syncs automatically and opens My Data. Use Sync now after your Fitbit has synced to Google Health. Food requires separate optional nutrition access.</p><button class="primary full" data-action="google-login">${status.configured ? "CONNECT GOOGLE HEALTH" : "VIEW SETUP REQUIREMENTS"}</button></section><details class="card setup-details" ${status.configured ? "" : "open"}><summary>For the app owner · server setup</summary><p class="note">${status.configured ? "Server configuration is present. Google consent is still required." : "This installation needs Google OAuth credentials before sign-in can work."}</p><ol class="setup-steps"><li>Create a Google Cloud project and enable Google Health API.</li><li>Create a Web application OAuth client, configure consent and add your account under Test users.</li><li>Add the three read-only Google Health scopes: activity_and_fitness, sleep, and health_metrics_and_measurements.</li><li>Register this exact redirect URI:<code class="callback-value">${esc(callback)}</code><button class="block-button full" data-action="copy-callback">COPY CALLBACK URI</button></li><li>In Vercel → Settings → Environment Variables, set APP_ORIGIN to this app’s HTTPS origin, GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your client values, and SESSION_SECRET to a random secret of at least 32 characters. Redeploy.</li></ol><p class="note">Keep secrets on the server. Never enter your Google password or OAuth secret into a GOOP form.</p><a class="block-button full" href="https://developers.google.com/health/setup" target="_blank" rel="noopener noreferrer">OFFICIAL GOOGLE SETUP GUIDE ↗</a></details><section class="card"><h3>Having trouble?</h3><p class="note"><b>redirect_uri_mismatch:</b> copy the exact callback above into your OAuth client.<br><b>Access blocked:</b> add your account as a test user and check enabled scopes.<br><b>No measurements:</b> sync Fitbit first and verify this is the same Google Health account.<br><b>Sign-in expired:</b> reconnect; Google testing-mode refresh tokens can expire after seven days.<br><b>Some metrics missing:</b> your device or granted permissions may not supply them. Reconnect to review access.</p></section>`;
+    return `<div class="feature-hero"><h1>Connect Google Health</h1><p>A one-time setup, then sign in and sync.</p></div><section class="card"><h3>1. Sync your Fitbit</h3><p class="note">Open Google Health on your phone, sign in to your Fitbit-linked Google account, and sync your device. Confirm your sleep and activity data are visible there.</p><h3>2. Connect your account</h3><p class="note">Return to GOOP → More → Connections → Connect account. Choose the same Google account. Google handles your password; GOOP never sees it.</p><h3>3. Allow read access</h3><p class="note">Activity & fitness brings steps and workouts. Sleep brings your sleep history. Health metrics brings HRV, resting heart rate, breathing, oxygen, temperature and weight when available. You can decline permissions; affected measurements stay empty.</p><h3>4. See your measurements</h3><p class="note">After sign-in, GOOP syncs automatically and opens My Data. Use Sync now after your Fitbit has synced to Google Health. Food requires separate optional nutrition access.</p><h3>Workout tracking and sync</h3><p class="note">Start and finish tracking in Google Health or on your Fitbit. Open GOOP to review the workout after Google makes the record available. GOOP refreshes on reopening and every five minutes while open in My Data. For real-time BPM, use Activities → iPhone / Fitbit Air setup to connect the Bluetooth heart-rate stream. It cannot remotely start or join the live tracker. GOOP timer sessions stay local and are not uploaded to Google Health.</p><button class="primary full" data-action="google-login">${status.configured ? "CONNECT GOOGLE HEALTH" : "VIEW SETUP REQUIREMENTS"}</button></section><details class="card setup-details" ${status.configured ? "" : "open"}><summary>For the app owner · server setup</summary><p class="note">${status.configured ? "Server configuration is present. Google consent is still required." : "This installation needs Google OAuth credentials before sign-in can work."}</p><ol class="setup-steps"><li>Create a Google Cloud project and enable Google Health API.</li><li>Create a Web application OAuth client, configure consent and add your account under Test users.</li><li>Add the three read-only Google Health scopes: activity_and_fitness, sleep, and health_metrics_and_measurements.</li><li>Register this exact redirect URI:<code class="callback-value">${esc(callback)}</code><button class="block-button full" data-action="copy-callback">COPY CALLBACK URI</button></li><li>In Vercel → Settings → Environment Variables, set APP_ORIGIN to this app’s HTTPS origin, GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your client values, and SESSION_SECRET to a random secret of at least 32 characters. Redeploy.</li></ol><p class="note">Keep secrets on the server. Never enter your Google password or OAuth secret into a GOOP form.</p><a class="block-button full" href="https://developers.google.com/health/setup" target="_blank" rel="noopener noreferrer">OFFICIAL GOOGLE SETUP GUIDE ↗</a></details><section class="card"><h3>Having trouble?</h3><p class="note"><b>redirect_uri_mismatch:</b> copy the exact callback above into your OAuth client.<br><b>Access blocked:</b> add your account as a test user and check enabled scopes.<br><b>No measurements:</b> sync Fitbit first and verify this is the same Google Health account.<br><b>Sign-in expired:</b> reconnect; Google testing-mode refresh tokens can expire after seven days.<br><b>Some metrics missing:</b> your device or granted permissions may not supply them. Reconnect to review access.</p></section>`;
   }
   function connectionPage() {
     const data = sources.find((s) => s.id === "google");
@@ -186,11 +190,13 @@ export function createEnhancements(ctx) {
       /* Offline preview can still use local logs. */
     }
   }
-  async function sync() {
+  let lastSyncAttempt = 0;
+  async function sync(quiet = false) {
     if (syncBusy) return;
     syncBusy = true;
+    lastSyncAttempt = Date.now();
     syncMessage = "Syncing your Google Health measurements…";
-    render();
+    if (!quiet) render();
     try {
       const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await fetch(
@@ -206,15 +212,32 @@ export function createEnhancements(ctx) {
       syncMessage = body.warnings?.length
         ? `Synced with ${body.warnings.length} unavailable or partial collections. ${body.warnings.map((w) => w.type).join(", ")}`
         : "Sync complete. Your recorded measurements are ready.";
-      toast("Google Health synced.");
+      if (!quiet) toast("Google Health synced.");
     } catch (error) {
       syncMessage = error.message || "Sync failed. Please retry.";
-      toast(syncMessage);
+      if (!quiet) toast(syncMessage);
     } finally {
       syncBusy = false;
+      const savedScroll = scrollY;
       render();
+      if (quiet) scrollTo(0, savedScroll);
     }
   }
+  function refreshRecorded() {
+    if (
+      document.hidden ||
+      mode !== "real" ||
+      !status.connected ||
+      syncBusy ||
+      Date.now() - lastSyncAttempt < 60000 ||
+      document.activeElement?.matches("input, textarea, select")
+    )
+      return;
+    void sync(true);
+  }
+  document.addEventListener("visibilitychange", refreshRecorded);
+  window.addEventListener("focus", refreshRecorded);
+  setInterval(refreshRecorded, 300000);
   function metricRow(metric) {
     if (mode === "demo") return null;
     const m = meta[metric] || [
@@ -309,7 +332,7 @@ export function createEnhancements(ctx) {
     manualType = type;
     modal(
       type,
-      `<div class="workout-ready">${icon(type === "Cycling" ? "bike" : type === "Weightlifting" ? "strength" : "run")}<h3>Ready when you are.</h3><p>A 3–2–1 countdown, then your session begins.</p><div class="ready-zones">${["Very light", "Light", "Moderate", "Hard", "Maximum"].map((z, i) => `<span style="--zone-color:${["#8296ab", "#6497de", "#89d9a1", "#d6be70", "#d48058"][i]}"><i></i>${z}</span>`).join("")}</div><p class="data-note">Timer works live. Heart rate is simulated until a supported live sensor connection is available. Zone preview uses a sample maximum heart rate of 190 bpm.</p><button class="primary full start-workout-button" data-action="start-countdown" data-type="${esc(type)}">START ${icon("run")}</button><button class="block-button full" data-action="start-activity">CHANGE ACTIVITY</button></div>`,
+      `<div class="workout-ready">${icon(type === "Cycling" ? "bike" : type === "Weightlifting" ? "strength" : "run")}<h3>Ready when you are.</h3><p>A 3–2–1 countdown, then your session begins.</p><div class="ready-zones">${["Very light", "Light", "Moderate", "Hard", "Maximum"].map((z, i) => `<span style="--zone-color:${["#8296ab", "#6497de", "#89d9a1", "#d6be70", "#d48058"][i]}"><i></i>${z}</span>`).join("")}</div><p class="data-note">Timer works live. Connect a heart-rate sensor from Activities for real BPM; unconnected Demo sessions simulate heart rate. My Data uses a timer only. Zone preview uses a sample maximum heart rate of 190 bpm.</p><button class="primary full start-workout-button" data-action="start-countdown" data-type="${esc(type)}">START ${icon("run")}</button><button class="block-button full" data-action="start-activity">CHANGE ACTIVITY</button></div>`,
     );
   }
   function picker() {
@@ -837,6 +860,7 @@ export function createEnhancements(ctx) {
   };
   return {
     actions,
+    isDemo: () => mode === "demo",
     value,
     metricRow,
     updateRibbon,
@@ -862,6 +886,9 @@ export function createEnhancements(ctx) {
                 dial,
                 metricRow,
                 activityLaunch: ctx.activityLaunch(),
+                localWorkouts: ctx
+                  .localWorkouts()
+                  .filter((w) => w.source !== "simulated"),
                 dashboard: ctx.dashboard(),
                 displayTitle: ctx.displayTitle(),
               })
@@ -881,6 +908,9 @@ export function createEnhancements(ctx) {
           dial,
           metricRow,
           activityLaunch: ctx.activityLaunch(),
+          localWorkouts: ctx
+            .localWorkouts()
+            .filter((w) => w.source !== "simulated"),
           dashboard: ctx.dashboard(),
           displayTitle: ctx.displayTitle(),
         });
@@ -906,6 +936,8 @@ export function createEnhancements(ctx) {
         history.replaceState(null, "", location.pathname + "#connections");
         go("connections");
         await sync();
+      } else if (mode === "real" && status.connected) {
+        await sync(true);
       }
     },
   };
