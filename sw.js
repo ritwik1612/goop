@@ -1,4 +1,4 @@
-const CACHE = "goop-v4";
+const CACHE = "goop-v5";
 const SHELL = [
   "/",
   "/goop.css",
